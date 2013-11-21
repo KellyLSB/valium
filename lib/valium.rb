@@ -2,9 +2,9 @@ require "valium/version"
 require 'active_record'
 
 module Valium
-  if ActiveRecord::VERSION::MAJOR == 3
+  if ActiveRecord::VERSION::MAJOR >= 3
 
-    if ActiveRecord::VERSION::MINOR == 0 # We need to use the old deserialize code
+    if ActiveRecord::VERSION::MAJOR == 3 && ActiveRecord::VERSION::MINOR == 0 # We need to use the old deserialize code
 
       CollectionProxy = ActiveRecord::Associations::AssociationProxy
 
@@ -51,13 +51,31 @@ module Valium
 
     alias :values_of :value_of
 
+    if ActiveRecord::VERSION::MAJOR < 4
+
+      def valium_select_rows(relation)
+        connection.select_rows(relation.to_sql)
+      end
+
+    else
+
+      def valium_select_rows(relation)
+        connection.select_all(
+          relation.to_sql,
+          "Valium Read",
+          relation.bind_values
+        ).rows
+      end
+
+    end
+
     def valium_select_multiple(attr_names)
       columns = attr_names.map {|n| columns_hash[n]}
       coders  = attr_names.map {|n| serialized_attributes[n]}
 
-      connection.select_rows(
-        except(:select).select(attr_names.map {|n| arel_table[n]}).to_sql
-      ).map! do |values|
+      relation = except(:select).select(attr_names.map {|n| arel_table[n]})
+
+      valium_select_rows(relation).map! do |values|
         values.each_with_index do |value, index|
           values[index] = valium_cast(value, columns[index], coders[index])
         end
@@ -68,9 +86,9 @@ module Valium
       column = columns_hash[attr_name]
       coder  = serialized_attributes[attr_name]
 
-      connection.select_rows(
-        except(:select).select(arel_table[attr_name]).to_sql
-      ).map! do |values|
+      relation = except(:select).select(arel_table[attr_name])
+
+      valium_select_rows(relation).map! do |values|
         valium_cast(values[0], column, coder)
       end
     end
