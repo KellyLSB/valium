@@ -1,4 +1,4 @@
-require "valium/version"
+ require "valium/version"
 require 'active_record'
 
 module Valium
@@ -50,6 +50,7 @@ module Valium
     end
 
     alias :values_of :value_of
+    alias :[] :value_of
 
     if ActiveRecord::VERSION::MAJOR < 4
 
@@ -117,13 +118,13 @@ module Valium
             to_a.map {|record| record[args[0]]}
           end
         else
-          scoping { klass.value_of *args }
+          scoping { klass.value_of(*args) }
         end
       end
+
+      alias :values_of :value_of
+      alias :[] :value_of
     end
-
-    alias :values_of :value_of
-
   end # Major version check
 end
 
