@@ -37,6 +37,13 @@ module Valium
     end # Minor version check
 
     def value_of(*attr_names)
+      # If not a column assume array indexer
+      columns = column_names.map(&:to_sym)
+      compare = columns.include?("#{attr_names.first}".to_sym)
+      if attr_names.first.is_a?(Range) || ! compare
+        return to_a[*attr_names]
+      end
+
       attr_names.map! do |attr_name|
         attr_name = attr_name.to_s
         attr_name == 'id' ? primary_key : attr_name
@@ -106,6 +113,13 @@ module Valium
 
     module ValueOf
       def value_of(*args)
+        # If not a column assume array indexer
+        columns = klass.column_names.map(&:to_sym)
+        compare = columns.include?("#{args.first}".to_sym)
+        if args.first.is_a?(Range) || ! compare
+          return to_a[*args]
+        end
+
         args.map! do |attr_name|
           attr_name = attr_name.to_s
           attr_name == 'id' ? klass.primary_key : attr_name
